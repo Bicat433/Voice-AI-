@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Registration Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f7fa; color: #1a1a2e; padding: 2rem; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    .stats { display: flex; gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #fff; border-radius: 8px; padding: 1rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .stat-card .number { font-size: 2rem; font-weight: 700; color: #2563eb; }
+    .stat-card .label { font-size: 0.85rem; color: #666; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #2563eb; color: #fff; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:hover { background: #f0f4ff; }
+    .error { background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+    .loading { text-align: center; padding: 3rem; color: #666; }
+    .refresh-btn { background: #2563eb; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin-bottom: 1rem; }
+    .refresh-btn:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <h1>Patient Registration Dashboard</h1>
+  <p class="subtitle">Voice AI intake — registered patients</p>
+
+  <button class="refresh-btn" onclick="loadPatients()">Refresh</button>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="number" id="total-count">—</div>
+      <div class="label">Total Patients</div>
+    </div>
+  </div>
+
+  <div id="error-container"></div>
+  <div id="table-container" class="loading">Loading patients...</div>
+
+  <script>
+    async function loadPatients() {
+      const container = document.getElementById('table-container');
+      const errorContainer = document.getElementById('error-container');
+      errorContainer.innerHTML = '';
+      container.innerHTML = '<div class="loading">Loading patients...</div>';
+
+      try {
+        const resp = await fetch('/patients');
+        const body = await resp.json();
+
+        if (body.error) {
+          errorContainer.innerHTML = `<div class="error">${body.error.message}</div>`;
+          container.innerHTML = '';
+          return;
+        }
+
+        const patients = body.data || [];
+        document.getElementById('total-count').textContent = patients.length;
+
+        if (patients.length === 0) {
+          container.innerHTML = '<div class="loading">No patients registered yet.</div>';
+          return;
+        }
+
+        const rows = patients.map(p => `
+          <tr>
+            <td>${p.first_name} ${p.last_name}</td>
+            <td>${p.date_of_birth}</td>
+            <td>${p.sex}</td>
+            <td>${formatPhone(p.phone_number)}</td>
+            <td>${p.city}, ${p.state} ${p.zip_code}</td>
+            <td>${p.insurance_provider || '—'}</td>
+            <td>${new Date(p.created_at).toLocaleDateString()}</td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>DOB</th>
+                <th>Sex</th>
+                <th>Phone</th>
+                <th>Location</th>
+                <th>Insurance</th>
+                <th>Registered</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      } catch (err) {
+        errorContainer.innerHTML = `<div class="error">Failed to load patients: ${err.message}</div>`;
+        container.innerHTML = '';
+      }
+    }
+
+    function formatPhone(num) {
+      if (!num || num.length !== 10) return num;
+      return `(${num.slice(0,3)}) ${num.slice(3,6)}-${num.slice(6)}`;
+    }
+
+    loadPatients();
+  </script>
+</body>
+</html>
