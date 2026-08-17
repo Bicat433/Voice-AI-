@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import async_session_factory, init_db
 from app.routers.patients import router as patients_router
+from app.routers.vapi import router as vapi_router
 from app.schemas.patient import ApiResponse
 from app.seed import seed_demo_patient
 
@@ -45,6 +46,7 @@ app.add_middleware(
 )
 
 app.include_router(patients_router)
+app.include_router(vapi_router)
 
 
 @app.exception_handler(RequestValidationError)
