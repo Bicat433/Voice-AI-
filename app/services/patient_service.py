@@ -52,10 +52,13 @@ async def get_patient_by_id(db: AsyncSession, patient_id: str) -> Patient | None
 
 async def lookup_by_phone(db: AsyncSession, phone_number: str) -> Patient | None:
     result = await db.execute(
-        select(Patient).where(
+        select(Patient)
+        .where(
             Patient.phone_number == phone_number,
             Patient.deleted_at.is_(None),
         )
+        .order_by(Patient.created_at.desc())
+        .limit(1)
     )
     return result.scalar_one_or_none()
 
