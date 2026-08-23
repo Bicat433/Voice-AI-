@@ -21,6 +21,10 @@
     .loading { text-align: center; padding: 3rem; color: #666; }
     .refresh-btn { background: #2563eb; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin-bottom: 1rem; }
     .refresh-btn:hover { background: #1d4ed8; }
+    .link-btn { background: none; border: none; color: #2563eb; cursor: pointer; font-size: 0.85rem; padding: 0; text-decoration: underline; }
+    .transcript-row td { background: #f8fafc; font-size: 0.85rem; white-space: pre-wrap; }
+    .transcript-row .summary { font-weight: 600; margin-bottom: 0.5rem; }
+    .transcript-row .empty { color: #666; }
   </style>
 </head>
 <body>
@@ -73,6 +77,10 @@
             <td>${p.city}, ${p.state} ${p.zip_code}</td>
             <td>${p.insurance_provider || '—'}</td>
             <td>${new Date(p.created_at).toLocaleDateString()}</td>
+            <td><button class="link-btn" onclick="toggleTranscripts('${p.patient_id}')">Calls</button></td>
+          </tr>
+          <tr class="transcript-row" id="transcripts-${p.patient_id}" style="display:none">
+            <td colspan="8"><div class="loading">Loading...</div></td>
           </tr>
         `).join('');
 
@@ -87,6 +95,7 @@
                 <th>Location</th>
                 <th>Insurance</th>
                 <th>Registered</th>
+                <th>Call History</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -95,6 +104,30 @@
       } catch (err) {
         errorContainer.innerHTML = `<div class="error">Failed to load patients: ${err.message}</div>`;
         container.innerHTML = '';
+      }
+    }
+
+    async function toggleTranscripts(patientId) {
+      const row = document.getElementById(`transcripts-${patientId}`);
+      if (row.style.display === 'none') {
+        row.style.display = '';
+        try {
+          const resp = await fetch(`/patients/${patientId}/transcripts`);
+          const body = await resp.json();
+          const calls = body.data || [];
+          if (calls.length === 0) {
+            row.querySelector('td').innerHTML = '<span class="empty">No call transcripts recorded yet.</span>';
+            return;
+          }
+          row.querySelector('td').innerHTML = calls.map(c => `
+            <div class="summary">${new Date(c.created_at).toLocaleString()}${c.ended_reason ? ' — ' + c.ended_reason : ''}</div>
+            <div>${c.summary || '(no summary)'}</div>
+          `).join('<hr style="margin: 0.75rem 0; border: none; border-top: 1px solid #e5e7eb">');
+        } catch (err) {
+          row.querySelector('td').innerHTML = `<span class="empty">Failed to load: ${err.message}</span>`;
+        }
+      } else {
+        row.style.display = 'none';
       }
     }
 

@@ -124,6 +124,8 @@ All responses use the envelope format:
 | `PUT` | `/patients/{id}` | Partial update |
 | `DELETE` | `/patients/{id}` | Soft delete (sets `deleted_at`) |
 | `GET` | `/patients/lookup?phone_number=` | Duplicate detection for voice agent |
+| `GET` | `/patients/{id}/transcripts` | Call transcripts/summaries linked to this patient |
+| `POST` | `/vapi/webhook` | Receives Vapi's `end-of-call-report` server message, stores transcript/summary, links to patient by phone number |
 
 ### Example: Create Patient
 
@@ -169,8 +171,16 @@ This deployment's volume persistence has been verified: records survive across r
    - `update_patient` → `POST {API_BASE_URL}/vapi/update_patient`
 5. See [`vapi_tools.json`](vapi_tools.json) for tool parameter schemas
 6. Enable `endCallFunctionEnabled` and set `endCallPhrases` to a phrase unique to the closing line only, e.g. `["You're all set"]` — relying solely on the LLM to invoke an `endCall` tool call in the same turn as its closing message is unreliable in practice. Be careful the phrase doesn't also appear in the opening greeting or mid-call prompts, or the call will hang up early.
-7. Assign a phone number to the assistant
-8. Test with a live call
+7. Set the assistant's `server.url` to `{API_BASE_URL}/vapi/webhook` and enable `analysisPlan.summaryPlan.enabled` — this stores a transcript/summary of every call, linked to the patient by phone number (see [Call Transcripts](#call-transcripts-bonus) below)
+8. Assign a phone number to the assistant
+9. Test with a live call
+
+## Call Transcripts (Bonus)
+
+Every call ends with Vapi POSTing an `end-of-call-report` server message to `/vapi/webhook`. The handler:
+- Looks up the patient by the caller's phone number (best-effort; may be unlinked if the call never reached that point)
+- Stores the transcript, Vapi-generated summary, and end reason in a `call_transcripts` table
+- Exposed via `GET /patients/{id}/transcripts`, and visible in the dashboard under each patient's "Calls" link
 
 ## Edge Cases Handled
 
@@ -197,7 +207,6 @@ This deployment's volume persistence has been verified: records survive across r
 - [ ] Mount Railway volume for persistent SQLite
 - [ ] Add API authentication (API key or JWT)
 - [ ] Implement call-drop resume via Vapi session/conversation state
-- [ ] Store call transcripts via Vapi end-of-call webhook
 - [ ] Migrate to PostgreSQL for production
 - [ ] Multi-language support via Vapi language settings
 - [ ] HIPAA-compliant hosting (AWS HIPAA BAA, encrypted storage)
@@ -210,15 +219,17 @@ The full conversational system prompt is in [`vapi_system_prompt.md`](vapi_syste
 
 ```
 ├── app/
-│   ├── main.py              # FastAPI app, CORS, error handlers
-│   ├── config.py            # Settings from env vars
-│   ├── database.py          # Async SQLAlchemy engine + sessions
-│   ├── seed.py              # Demo patient seed
-│   ├── models/patient.py    # SQLAlchemy Patient model
-│   ├── schemas/             # Pydantic Create/Update/Response schemas
-│   ├── routers/patients.py  # All 6 API endpoints
-│   └── services/            # Database operations + structured logging
-├── static/dashboard.html    # Minimal patient listing dashboard
+│   ├── main.py                    # FastAPI app, CORS, error handlers
+│   ├── config.py                  # Settings from env vars
+│   ├── database.py                # Async SQLAlchemy engine + sessions
+│   ├── seed.py                    # Demo patient seed
+│   ├── models/patient.py          # SQLAlchemy Patient model
+│   ├── models/call_transcript.py  # SQLAlchemy CallTranscript model
+│   ├── schemas/                   # Pydantic Create/Update/Response schemas
+│   ├── routers/patients.py        # Patient CRUD + transcript listing endpoints
+│   ├── routers/vapi.py            # Vapi tool adapters + end-of-call webhook
+│   └── services/                  # Database operations + structured logging
+├── static/dashboard.html    # Patient dashboard with per-patient call history
 ├── tests/                   # pytest + httpx async tests
 ├── vapi_system_prompt.md    # Voice agent system prompt
 ├── vapi_tools.json          # Tool definitions for Vapi

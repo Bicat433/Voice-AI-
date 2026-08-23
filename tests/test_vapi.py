@@ -122,3 +122,46 @@ async def test_vapi_update_patient(client: AsyncClient):
     assert response.json() == {
         "results": [{"toolCallId": "call_test3", "result": "Patient updated successfully"}]
     }
+
+
+@pytest.mark.asyncio
+async def test_vapi_webhook_stores_transcript_linked_to_patient(client: AsyncClient):
+    from tests.conftest import VALID_PATIENT
+
+    await client.post("/patients", json=VALID_PATIENT)
+
+    response = await client.post(
+        "/vapi/webhook",
+        json={
+            "message": {
+                "type": "end-of-call-report",
+                "endedReason": "assistant-said-end-call-phrase",
+                "transcript": "AI: Hi... User: hello",
+                "summary": "Caller confirmed existing details.",
+                "call": {"id": "call_abc123", "customer": {"number": "+15551112233"}},
+            }
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {"received": True}
+
+    list_resp = await client.get("/patients", params={"phone_number": "5551112233"})
+    patient_id = list_resp.json()["data"][0]["patient_id"]
+
+    transcripts_resp = await client.get(f"/patients/{patient_id}/transcripts")
+    assert transcripts_resp.status_code == 200
+    data = transcripts_resp.json()["data"]
+    assert len(data) == 1
+    assert data[0]["call_id"] == "call_abc123"
+    assert data[0]["summary"] == "Caller confirmed existing details."
+    assert data[0]["transcript"] == "AI: Hi... User: hello"
+
+
+@pytest.mark.asyncio
+async def test_vapi_webhook_ignores_non_report_messages(client: AsyncClient):
+    response = await client.post(
+        "/vapi/webhook",
+        json={"message": {"type": "status-update"}},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"received": True}

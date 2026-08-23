@@ -7,9 +7,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.patient import ApiResponse, PatientCreate, PatientResponse, PatientUpdate
+from app.schemas.patient import ApiResponse, CallTranscriptResponse, PatientCreate, PatientResponse, PatientUpdate
 from app.schemas.validators import normalize_phone
-from app.services import patient_service
+from app.services import call_transcript_service, patient_service
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -112,6 +112,17 @@ async def update_patient(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     return _success(PatientResponse.model_validate(updated).model_dump(mode="json"))
+
+
+@router.get("/{patient_id}/transcripts")
+async def get_patient_transcripts(patient_id: str, db: AsyncSession = Depends(get_db)):
+    patient = await patient_service.get_patient_by_id(db, patient_id)
+    if patient is None:
+        return _error("Patient not found", "NOT_FOUND", status.HTTP_404_NOT_FOUND)
+
+    transcripts = await call_transcript_service.list_transcripts_for_patient(db, patient_id)
+    data = [CallTranscriptResponse.model_validate(t).model_dump(mode="json") for t in transcripts]
+    return _success(data)
 
 
 @router.delete("/{patient_id}")

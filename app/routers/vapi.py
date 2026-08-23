@@ -13,7 +13,7 @@ from app.database import get_db
 from app.schemas.patient import PatientCreate, PatientUpdate
 from app.schemas.validators import normalize_phone
 from app.schemas.vapi import VapiToolResponse
-from app.services import patient_service
+from app.services import call_transcript_service, patient_service
 
 logger = logging.getLogger(__name__)
 
@@ -145,3 +145,45 @@ async def vapi_update_patient(request: Request, db: AsyncSession = Depends(get_d
         return _vapi_response(tool_call_id, f"Failed to save: {exc}")
 
     return _vapi_response(tool_call_id, "Patient updated successfully")
+
+
+@router.post("/webhook")
+async def vapi_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """Receives Vapi server messages (end-of-call-report) and stores the transcript/summary."""
+    try:
+        body = await request.json()
+    except Exception:
+        return {"received": False}
+
+    message = body.get("message", {})
+    if message.get("type") != "end-of-call-report":
+        return {"received": True}
+
+    call = message.get("call", {})
+    customer_number = (
+        call.get("customer", {}).get("number")
+        or message.get("customer", {}).get("number")
+    )
+
+    patient_id = None
+    normalized_phone = None
+    if customer_number:
+        try:
+            normalized_phone = normalize_phone(str(customer_number))
+            patient = await patient_service.lookup_by_phone(db, normalized_phone)
+            if patient is not None:
+                patient_id = patient.patient_id
+        except ValueError:
+            pass
+
+    await call_transcript_service.save_transcript(
+        db,
+        call_id=call.get("id"),
+        patient_id=patient_id,
+        phone_number=normalized_phone,
+        transcript=message.get("transcript") or message.get("artifact", {}).get("transcript"),
+        summary=message.get("summary"),
+        ended_reason=message.get("endedReason"),
+    )
+
+    return {"received": True}

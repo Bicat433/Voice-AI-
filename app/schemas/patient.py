@@ -167,6 +167,19 @@ class PatientResponse(PatientBase):
     deleted_at: datetime | None = None
 
 
+class CallTranscriptResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    call_id: str | None = None
+    patient_id: str | None = None
+    phone_number: str | None = None
+    transcript: str | None = None
+    summary: str | None = None
+    ended_reason: str | None = None
+    created_at: datetime
+
+
 class ApiResponse(BaseModel):
     data: Any = None
     error: dict[str, str] | None = None
