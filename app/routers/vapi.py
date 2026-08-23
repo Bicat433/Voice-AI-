@@ -96,7 +96,8 @@ async def vapi_lookup_patient(request: Request, db: AsyncSession = Depends(get_d
 
     return _vapi_response(
         tool_call_id,
-        f"Found existing patient: {patient.first_name} {patient.last_name}",
+        f"Found existing patient: {patient.first_name} {patient.last_name} "
+        f"(patient_id: {patient.patient_id})",
     )
 
 

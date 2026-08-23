@@ -8,10 +8,10 @@ A voice-based AI patient registration system for healthcare intake. Callers dial
 
 | Resource | URL |
 |----------|-----|
-| API Base URL | `https://YOUR-RAILWAY-APP.up.railway.app` *(fill in after deploy)* |
-| Phone Number | *(fill in after Vapi setup)* |
-| Dashboard | `https://YOUR-RAILWAY-APP.up.railway.app/dashboard` |
-| API Docs | `https://YOUR-RAILWAY-APP.up.railway.app/docs` |
+| API Base URL | `https://web-production-fe469.up.railway.app` |
+| Phone Number | `+1 (843) 969-4359` |
+| Dashboard | `https://web-production-fe469.up.railway.app/dashboard` |
+| API Docs | `https://web-production-fe469.up.railway.app/docs` |
 
 ## Architecture
 
@@ -154,21 +154,23 @@ curl -X POST http://localhost:8000/patients \
 
 For persistent SQLite on Railway, mount a volume and set:
 ```
-DATABASE_URL=sqlite+aiosqlite:////data/patients.db
+DATABASE_URL=sqlite+aiosqlite:////Data/patients.db
 ```
+This deployment's volume persistence has been verified: records survive across redeploys.
 
 ## Vapi Assistant Setup
 
 1. Go to [Vapi Dashboard](https://dashboard.vapi.ai) → Assistants → Create
 2. Paste the system prompt from [`vapi_system_prompt.md`](vapi_system_prompt.md)
 3. Configure the model (GPT-4o or similar) with your OpenAI API key
-4. Add three tools pointing at your deployed API base URL:
-   - `lookup_patient_by_phone` → `GET {API_BASE_URL}/patients/lookup?phone_number={phone_number}`
-   - `create_patient` → `POST {API_BASE_URL}/patients`
-   - `update_patient` → `PUT {API_BASE_URL}/patients/{patient_id}`
+4. Add three tools pointing at your deployed API base URL's Vapi adapter endpoints (Vapi always POSTs the tool-call envelope to `server.url` — these adapter routes translate it to the REST layer):
+   - `lookup_patient_by_phone` → `POST {API_BASE_URL}/vapi/lookup_patient`
+   - `create_patient` → `POST {API_BASE_URL}/vapi/create_patient`
+   - `update_patient` → `POST {API_BASE_URL}/vapi/update_patient`
 5. See [`vapi_tools.json`](vapi_tools.json) for tool parameter schemas
-6. Assign a phone number to the assistant
-7. Test with a live call
+6. Enable `endCallFunctionEnabled` and set `endCallPhrases` to a phrase unique to the closing line only, e.g. `["You're all set"]` — relying solely on the LLM to invoke an `endCall` tool call in the same turn as its closing message is unreliable in practice. Be careful the phrase doesn't also appear in the opening greeting or mid-call prompts, or the call will hang up early.
+7. Assign a phone number to the assistant
+8. Test with a live call
 
 ## Edge Cases Handled
 
@@ -186,7 +188,7 @@ DATABASE_URL=sqlite+aiosqlite:////data/patients.db
 - **No HIPAA compliance** — demo system with SQLite, no encryption at rest, no audit logging beyond stdout
 - **No call-drop resume** — if a call disconnects mid-registration, the caller must start over
 - **Single language** — English only (preferred_language field exists but agent speaks English)
-- **SQLite persistence on Railway** — ephemeral filesystem unless a volume is mounted
+- **SQLite persistence on Railway** — requires a mounted volume with `DATABASE_URL` pointed at it (done for this deployment; verified data survives redeploys)
 - **No authentication** — API is open (appropriate for demo, not production)
 - **No appointment scheduling**
 

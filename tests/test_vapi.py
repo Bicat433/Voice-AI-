@@ -28,14 +28,10 @@ async def test_vapi_lookup_found(client: AsyncClient):
     )
     assert response.status_code == 200
     body = response.json()
-    assert body == {
-        "results": [
-            {
-                "toolCallId": "call_test1",
-                "result": "Found existing patient: Alice Smith",
-            }
-        ]
-    }
+    result = body["results"][0]
+    assert result["toolCallId"] == "call_test1"
+    assert result["result"].startswith("Found existing patient: Alice Smith")
+    assert "patient_id" in result["result"]
 
 
 @pytest.mark.asyncio

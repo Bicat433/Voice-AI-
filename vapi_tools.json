@@ -14,14 +14,10 @@
             }
           },
           "required": ["phone_number"]
-        },
-        "server": {
-          "url": "{{API_BASE_URL}}/patients/lookup",
-          "method": "GET",
-          "query": {
-            "phone_number": "{{phone_number}}"
-          }
         }
+      },
+      "server": {
+        "url": "{{API_BASE_URL}}/vapi/lookup_patient"
       }
     },
     {
@@ -60,12 +56,10 @@
             "state",
             "zip_code"
           ]
-        },
-        "server": {
-          "url": "{{API_BASE_URL}}/patients",
-          "method": "POST",
-          "body": "{{parameters}}"
         }
+      },
+      "server": {
+        "url": "{{API_BASE_URL}}/vapi/create_patient"
       }
     },
     {
@@ -95,12 +89,10 @@
             "emergency_contact_phone": { "type": "string" }
           },
           "required": ["patient_id"]
-        },
-        "server": {
-          "url": "{{API_BASE_URL}}/patients/{{patient_id}}",
-          "method": "PUT",
-          "body": "{{parameters_without_patient_id}}"
         }
+      },
+      "server": {
+        "url": "{{API_BASE_URL}}/vapi/update_patient"
       }
     }
   ]
