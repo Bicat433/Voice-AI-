@@ -29,13 +29,13 @@
 </head>
 <body>
   <h1>Patient Registration Dashboard</h1>
-  <p class="subtitle">Voice AI intake — registered patients</p>
+  <p class="subtitle">Voice AI intake - registered patients</p>
 
   <button class="refresh-btn" onclick="loadPatients()">Refresh</button>
 
   <div class="stats">
     <div class="stat-card">
-      <div class="number" id="total-count">—</div>
+      <div class="number" id="total-count">-</div>
       <div class="label">Total Patients</div>
     </div>
   </div>
@@ -75,7 +75,7 @@
             <td>${p.sex}</td>
             <td>${formatPhone(p.phone_number)}</td>
             <td>${p.city}, ${p.state} ${p.zip_code}</td>
-            <td>${p.insurance_provider || '—'}</td>
+            <td>${p.insurance_provider || '-'}</td>
             <td>${new Date(p.created_at).toLocaleDateString()}</td>
             <td><button class="link-btn" onclick="toggleTranscripts('${p.patient_id}')">Calls</button></td>
           </tr>
@@ -120,7 +120,7 @@
             return;
           }
           row.querySelector('td').innerHTML = calls.map(c => `
-            <div class="summary">${new Date(c.created_at).toLocaleString()}${c.ended_reason ? ' — ' + c.ended_reason : ''}</div>
+            <div class="summary">${new Date(c.created_at).toLocaleString()}${c.ended_reason ? ' - ' + c.ended_reason : ''}</div>
             <div>${c.summary || '(no summary)'}</div>
           `).join('<hr style="margin: 0.75rem 0; border: none; border-top: 1px solid #e5e7eb">');
         } catch (err) {

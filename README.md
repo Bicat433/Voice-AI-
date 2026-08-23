@@ -2,7 +2,7 @@
 
 A voice-based AI patient registration system for healthcare intake. Callers dial a phone number, a Vapi voice agent conversationally collects patient demographics, confirms the data, persists it to SQLite, and exposes it via a REST API.
 
-> **Demo only** — do not store real patient data. This system is not HIPAA-compliant.
+> **Demo only** - do not store real patient data. This system is not HIPAA-compliant.
 
 ## Live Deployment
 
@@ -42,8 +42,8 @@ Caller Phone
 
 | Choice | Why |
 |--------|-----|
-| **Vapi** over raw Twilio | Vapi bundles STT + LLM + TTS + tool-calling into one platform. Raw Twilio would require wiring Deepgram/Whisper, OpenAI, and ElevenLabs separately — too much integration work for a 3-hour assessment. |
-| **FastAPI** | Async-native, automatic OpenAPI docs, Pydantic v2 integration — ideal for a tool-calling API backend. |
+| **Vapi** over raw Twilio | Vapi bundles STT + LLM + TTS + tool-calling into one platform. Raw Twilio would require wiring Deepgram/Whisper, OpenAI, and ElevenLabs separately - too much integration work for a 3-hour assessment. |
+| **FastAPI** | Async-native, automatic OpenAPI docs, Pydantic v2 integration - ideal for a tool-calling API backend. |
 | **SQLite** over Postgres | Zero-config, file-based, perfect for a demo/take-home. Railway supports both, but SQLite eliminates database provisioning overhead. Swap to Postgres by changing `DATABASE_URL` only. |
 | **SQLAlchemy async + aiosqlite** | Production-grade ORM patterns without blocking the event loop. |
 
@@ -86,9 +86,9 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The API is available at:
-- http://localhost:8000/docs — Swagger UI
-- http://localhost:8000/dashboard — Patient dashboard
-- http://localhost:8000/health — Health check
+- http://localhost:8000/docs - Swagger UI
+- http://localhost:8000/dashboard - Patient dashboard
+- http://localhost:8000/health - Health check
 
 A demo patient (Jane Doe) is seeded automatically on first boot.
 
@@ -104,9 +104,9 @@ pytest -v
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | No | `sqlite+aiosqlite:///./patients.db` | Async SQLite connection string |
 | `PORT` | No | `8000` | Server port (Railway sets this automatically) |
-| `VAPI_API_KEY` | Yes (for voice) | — | Vapi dashboard API key |
-| `VAPI_PHONE_NUMBER_ID` | Yes (for voice) | — | Vapi phone number ID for inbound calls |
-| `OPENAI_API_KEY` | Yes (for voice) | — | OpenAI key (configured in Vapi assistant) |
+| `VAPI_API_KEY` | Yes (for voice) | - | Vapi dashboard API key |
+| `VAPI_PHONE_NUMBER_ID` | Yes (for voice) | - | Vapi phone number ID for inbound calls |
+| `OPENAI_API_KEY` | Yes (for voice) | - | OpenAI key (configured in Vapi assistant) |
 
 ## API Endpoints
 
@@ -149,9 +149,9 @@ curl -X POST http://localhost:8000/patients \
 
 1. Push this repo to GitHub
 2. Create a new project on [Railway](https://railway.app)
-3. Connect the GitHub repo — Railway auto-detects Python via Nixpacks
+3. Connect the GitHub repo - Railway auto-detects Python via Nixpacks
 4. Set environment variables in Railway dashboard (at minimum `DATABASE_URL` if you want a persistent volume path)
-5. Railway sets `PORT` automatically — no code changes needed
+5. Railway sets `PORT` automatically - no code changes needed
 6. Note the public URL (e.g., `https://voice-ai-patient-reg.up.railway.app`)
 
 For persistent SQLite on Railway, mount a volume and set:
@@ -165,13 +165,13 @@ This deployment's volume persistence has been verified: records survive across r
 1. Go to [Vapi Dashboard](https://dashboard.vapi.ai) → Assistants → Create
 2. Paste the system prompt from [`vapi_system_prompt.md`](vapi_system_prompt.md)
 3. Configure the model (GPT-4o or similar) with your OpenAI API key
-4. Add three tools pointing at your deployed API base URL's Vapi adapter endpoints (Vapi always POSTs the tool-call envelope to `server.url` — these adapter routes translate it to the REST layer):
+4. Add three tools pointing at your deployed API base URL's Vapi adapter endpoints (Vapi always POSTs the tool-call envelope to `server.url` - these adapter routes translate it to the REST layer):
    - `lookup_patient_by_phone` → `POST {API_BASE_URL}/vapi/lookup_patient`
    - `create_patient` → `POST {API_BASE_URL}/vapi/create_patient`
    - `update_patient` → `POST {API_BASE_URL}/vapi/update_patient`
 5. See [`vapi_tools.json`](vapi_tools.json) for tool parameter schemas
-6. Enable `endCallFunctionEnabled` and set `endCallPhrases` to a phrase unique to the closing line only, e.g. `["You're all set"]` — relying solely on the LLM to invoke an `endCall` tool call in the same turn as its closing message is unreliable in practice. Be careful the phrase doesn't also appear in the opening greeting or mid-call prompts, or the call will hang up early.
-7. Set the assistant's `server.url` to `{API_BASE_URL}/vapi/webhook` and enable `analysisPlan.summaryPlan.enabled` — this stores a transcript/summary of every call, linked to the patient by phone number (see [Call Transcripts](#call-transcripts-bonus) below)
+6. Enable `endCallFunctionEnabled` and set `endCallPhrases` to a phrase unique to the closing line only, e.g. `["You're all set"]` - relying solely on the LLM to invoke an `endCall` tool call in the same turn as its closing message is unreliable in practice. Be careful the phrase doesn't also appear in the opening greeting or mid-call prompts, or the call will hang up early.
+7. Set the assistant's `server.url` to `{API_BASE_URL}/vapi/webhook` and enable `analysisPlan.summaryPlan.enabled` - this stores a transcript/summary of every call, linked to the patient by phone number (see [Call Transcripts](#call-transcripts-bonus) below)
 8. Assign a phone number to the assistant
 9. Test with a live call
 
@@ -188,18 +188,18 @@ Every call ends with Vapi POSTing an `end-of-call-report` server message to `/va
 |----------|----------|
 | Future date of birth | API returns 422; agent re-prompts for DOB only |
 | Invalid phone (not 10 digits) | API returns 422; agent re-prompts for phone only |
-| Call drops mid-registration | No partial record written — save only on explicit confirmation |
+| Call drops mid-registration | No partial record written - save only on explicit confirmation |
 | Database write failure | API returns 500 with envelope; agent tells caller and offers retry |
 | Caller wants to restart | Agent clears state and restarts greeting without ending call |
 | Duplicate phone number | Lookup returns existing record; agent offers update vs. new record |
 
 ## Known Limitations
 
-- **No HIPAA compliance** — demo system with SQLite, no encryption at rest, no audit logging beyond stdout
-- **No call-drop resume** — if a call disconnects mid-registration, the caller must start over
-- **Single language** — English only (preferred_language field exists but agent speaks English)
-- **SQLite persistence on Railway** — requires a mounted volume with `DATABASE_URL` pointed at it (done for this deployment; verified data survives redeploys)
-- **No authentication** — API is open (appropriate for demo, not production)
+- **No HIPAA compliance** - demo system with SQLite, no encryption at rest, no audit logging beyond stdout
+- **No call-drop resume** - if a call disconnects mid-registration, the caller must start over
+- **Single language** - English only (preferred_language field exists but agent speaks English)
+- **SQLite persistence on Railway** - requires a mounted volume with `DATABASE_URL` pointed at it (done for this deployment; verified data survives redeploys)
+- **No authentication** - API is open (appropriate for demo, not production)
 - **No appointment scheduling**
 
 ## Next Steps
